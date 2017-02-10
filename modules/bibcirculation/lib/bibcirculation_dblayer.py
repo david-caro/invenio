@@ -351,6 +351,30 @@ def get_loan_request_by_status(status):
     res = run_sql(query , (status, ))
     return res
 
+def get_loan_request_by_status_not_filtering_by_period(status):
+
+    query = """SELECT DISTINCT
+                        lr.id,
+                        lr.id_bibrec,
+                        lr.barcode,
+                        bor.name,
+                        bor.id,
+                        lib.name,
+                        it.location,
+                        DATE_FORMAT(lr.period_of_interest_from,'%%Y-%%m-%%d'),
+                        DATE_FORMAT(lr.period_of_interest_to,'%%Y-%%m-%%d'),
+                        lr.request_date
+                   FROM crcLOANREQUEST lr,
+                        crcBORROWER bor,
+                        crcITEM it,
+                        crcLIBRARY lib
+                  WHERE lr.id_crcBORROWER=bor.id AND it.barcode=lr.barcode AND
+                        lib.id = it.id_crcLIBRARY AND lr.status=%s
+               ORDER BY lr.request_date"""
+
+    res = run_sql(query , (status, ))
+    return res
+
 def get_requested_barcode(request_id):
     """
     request_id: identify the hold request. It is also the primary key
@@ -862,6 +886,33 @@ def get_expired_loans_with_waiting_requests():
                         AND l.due_date < CURDATE()))
                         AND lr.period_of_interest_from <= NOW()
                         AND lr.period_of_interest_to >= NOW()
+                   ORDER BY lr.request_date;
+                  """, ( CFG_BIBCIRCULATION_REQUEST_STATUS_PENDING,
+                         CFG_BIBCIRCULATION_REQUEST_STATUS_WAITING,
+                         CFG_BIBCIRCULATION_LOAN_STATUS_EXPIRED,
+                         CFG_BIBCIRCULATION_LOAN_STATUS_ON_LOAN))
+    return res
+
+
+def get_expired_loans_with_waiting_requests_not_filtering_by_period():
+
+    res = run_sql("""SELECT DISTINCT
+                            lr.id,
+                            lr.id_bibrec,
+                            lr.id_crcBORROWER,
+                            it.id_crcLIBRARY,
+                            it.location,
+                            DATE_FORMAT(lr.period_of_interest_from,'%%Y-%%m-%%d'),
+                            DATE_FORMAT(lr.period_of_interest_to,'%%Y-%%m-%%d'),
+                            lr.request_date
+                       FROM crcLOANREQUEST lr,
+                            crcITEM it,
+                            crcLOAN l
+                      WHERE it.barcode=l.barcode
+                        AND lr.id_bibrec=it.id_bibrec
+                        AND (lr.status=%s or lr.status=%s)
+                        AND (l.status=%s or (l.status=%s
+                        AND l.due_date < CURDATE()))
                    ORDER BY lr.request_date;
                   """, ( CFG_BIBCIRCULATION_REQUEST_STATUS_PENDING,
                          CFG_BIBCIRCULATION_REQUEST_STATUS_WAITING,

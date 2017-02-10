@@ -2065,10 +2065,10 @@ def get_pending_requests(req, request_id, print_data, ln=CFG_SITE_LANG):
                                       request_id)
         barcode = db.get_request_barcode(request_id)
         update_requests_statuses(barcode)
-        result = db.get_loan_request_by_status(CFG_BIBCIRCULATION_REQUEST_STATUS_PENDING)
 
-    else:
-        result = db.get_loan_request_by_status(CFG_BIBCIRCULATION_REQUEST_STATUS_PENDING)
+    result = db.get_loan_request_by_status_not_filtering_by_period(
+        CFG_BIBCIRCULATION_REQUEST_STATUS_PENDING,
+    )
 
     navtrail_previous_links = '<a class="navtrail" ' \
                               'href="%s/help/admin">Admin Area' \
@@ -2110,7 +2110,9 @@ def get_waiting_requests(req, request_id, print_data, ln=CFG_SITE_LANG):
         db.update_loan_request_status(CFG_BIBCIRCULATION_REQUEST_STATUS_CANCELLED,
                                       request_id)
 
-    result = db.get_loan_request_by_status(CFG_BIBCIRCULATION_REQUEST_STATUS_WAITING)
+    result = db.get_loan_request_by_status_not_filtering_by_period(
+        CFG_BIBCIRCULATION_REQUEST_STATUS_WAITING
+    )
     aux    = ()
 
     for request in result:
@@ -2144,10 +2146,9 @@ def get_expired_loans_with_waiting_requests(req, request_id, ln=CFG_SITE_LANG):
     if request_id:
         db.update_loan_request_status(CFG_BIBCIRCULATION_REQUEST_STATUS_CANCELLED,
                                       request_id)
-        result = db.get_expired_loans_with_waiting_requests()
 
-    else:
-        result = db.get_expired_loans_with_waiting_requests()
+    result = db.get_expired_loans_with_waiting_requests_not_filtering_by_period()
+
 
     navtrail_previous_links = '<a class="navtrail" ' \
                     'href="%s/help/admin">Admin Area' \
@@ -4980,7 +4981,7 @@ def ill_request_details_step2(req, delete_key, ill_request_id, new_status,
         except TypeError:
             _due_date = due_date
 
-        # This means that the ILL got extended, we therefore reset the 
+        # This means that the ILL got extended, we therefore reset the
         # overdue_letter_numer
         if _due < _due_date:
             db.update_ill_request_letter_number(ill_request_id, 0)
